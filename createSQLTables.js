@@ -1,16 +1,17 @@
 var app = require("./app");
 var async = require("async");
-var connection = app.connection;
+var connection = require("./db");
+
 
 // 1 Books
 var createBookTable = 
 "CREATE TABLE IF NOT EXISTS Books ( " +
 "Book_ID INT NOT NULL PRIMARY KEY AUTO_INCREMENT, " +
 "Title VARCHAR(150) NOT NULL, " +
-"Edition INT DEFAULT NULL, " +
+//"Edition INT DEFAULT NULL, " +
 "ISBN13 VARCHAR(13) UNIQUE DEFAULT NULL, " +
 "ISBN10 VARCHAR(10) UNIQUE DEFAULT NULL, " + 
-"image_file VARCHAR(45) DEFAULT 'default_book_cover.jpg' " +
+"image_file VARCHAR(55) DEFAULT 'default_book_cover.png' " +
 ")Engine=InnoDB";
 
 // Author and its relationships
@@ -58,10 +59,12 @@ var createBook_InstanceTable =
 "CREATE TABLE IF NOT EXISTS Book_Instances (" +
 "Book_Instance_ID INT(11) PRIMARY KEY AUTO_INCREMENT, " +
 "Book_ID INT(11) NOT NULL," +
+"Edition INT DEFAULT NULL, " +
 "Status CHAR(1) NOT NULL DEFAULT 'A', " +
 "Date_of_purchase DATE DEFAULT NULL," +
 "Remarks TINYTEXT DEFAULT NULL," +
 "Price INT DEFAULT NULL," +
+"image_file VARCHAR(55) DEFAULT NULL," +
 "FOREIGN KEY(Book_ID) REFERENCES Books(Book_ID) ON DELETE CASCADE ON UPDATE CASCADE" +
 ")Engine=InnoDB";
 
@@ -206,7 +209,38 @@ var createUser_Course_InstanceTable =
 "FOREIGN KEY (Course_Instance_ID) REFERENCES Course_Instances(Course_Instance_ID) ON DELETE NO ACTION ON UPDATE CASCADE"+
 ")Engine=InnoDB";
 
+// 18 Languages
+var createLanguageTable = 
+"CREATE TABLE IF NOT EXISTS Languages (" +
+"Language_ID INT PRIMARY KEY AUTO_INCREMENT, " +
+"Name VARCHAR(25) NOT NULL UNIQUE DEFAULT 'English' " +
+")Engine=InnoDB";
 
+// 19 Book_Language
+var createBook_LanguageTable = 
+"CREATE TABLE IF NOT EXISTS Book_Language (" +
+"Language_ID INT NOT NULL, " +
+"Book_ID INT NOT NULL, " +
+"PRIMARY KEY(Language_ID, Book_ID), " +
+"FOREIGN KEY (Language_ID) REFERENCES Languages(Language_ID) ON DELETE CASCADE ON UPDATE CASCADE, " +
+"FOREIGN KEY (Book_ID) REFERENCES Books(Book_ID) ON DELETE CASCADE ON UPDATE CASCADE" +
+")Engine=InnoDB";
+
+// 20 Publishers
+var createPublishersTable = 
+"CREATE TABLE IF NOT EXISTS Publishers ("+
+"Publisher_ID INT PRIMARY KEY AUTO_INCREMENT,"+
+"Name VARCHAR(50) UNIQUE"+
+")Engine=InnoDB";
+
+// 21 Book_Publisher
+var createBook_PublisherTable =
+"CREATE TABLE IF NOT EXISTS Book_Publisher ("+
+"Publisher_ID INT, "+
+"Book_ID INT UNIQUE, "+
+"FOREIGN KEY(Publisher_ID) REFERENCES Publishers(Publisher_ID) ON DELETE CASCADE ON UPDATE CASCADE,"+
+"FOREIGN KEY(Book_ID) REFERENCES Books(Book_ID) ON DELETE CASCADE ON UPDATE CASCADE"+
+")Engine=InnoDB";
 
 var tableNames = {
     // 1
@@ -258,12 +292,29 @@ var tableNames = {
     Course_Instances: createCourse_InstancesTable,
 
     // 17
-    User_Course_Instance: createUser_Course_InstanceTable
+    User_Course_Instance: createUser_Course_InstanceTable,
+
+    // 18
+    Languages: createLanguageTable,
+
+    // 19
+    Book_Language: createBook_LanguageTable,
+
+    // 20
+    Publishers: createPublishersTable,
+
+    // 21
+    Book_Publisher: createBook_PublisherTable,
 };
 
 // Array of functions to be put in async.series
 var functions = [];
 
+functions.push(function(callback){
+    connection.query("DROP DATABASE irimee; CREATE DATABASE irimee;use irimee", function(err, results){
+        callback(null, null);
+    })
+})
 // Create table for every object key, value
 Object.keys(tableNames).forEach((value, index)=>{
     functions.push(function(callback)
@@ -277,30 +328,98 @@ Object.keys(tableNames).forEach((value, index)=>{
                                 throw error;
                             }
                             console.log(`Successfully created table ${index + 1}: ${value}`);
+                            console.log("---------------------------------------------\n")
+                            callback(null, value);
                         });
                     
-                        // console.log("---------------------------------------------\n")
-                        callback(null, value);
+
+                        // callback(null, value);
                     }
                 );
 });
 
-async.series(functions, function(err, results)
-                        {
-                            console.log(`Created ${results.length} tables\n`);
-                            // results.forEach((element)=>{
-                            //     console.log(element);
-                            // });
-                        }
-            );
 
 // Add foreign key constraints
 // ADD fk to Book_Transaction (User_ID)
-connection.query("ALTER TABLE Book_Transactions ADD FOREIGN KEY(User_ID) REFERENCES Users(User_ID) ON DELETE NO ACTION ON UPDATE CASCADE", (err, results) => {
-    if(err)
-    {
-        console.log("Error in adding foreign key to Book_Transactions Table (User_ID)");
-        throw err;
-    }
-    console.log("Successfully added fk to book_transactions (User_Id)");
+functions.push(function(callback)
+                {
+                    connection.query("ALTER TABLE Book_Transactions ADD FOREIGN KEY(User_ID) REFERENCES Users(User_ID) ON DELETE NO ACTION ON UPDATE CASCADE", (err, results) => {
+                        if(err)
+                        {
+                            console.log("Error in adding foreign key to Book_Transactions Table (User_ID)");
+                            throw err;
+                        }
+                        console.log("Successfully added fk to book_transactions (User_Id)");
+                        callback(null, null);
+                    });
+                }
+);
+
+// async.series(functions, function(err, results)
+//                         {
+//                             console.log(`Created ${results.length} tables\n`);
+//                             // results.forEach((element)=>{
+//                             //     console.log(element);
+//                             // });
+//                         }
+//             );
+
+// Insert languages
+functions.push(function(cb)
+{
+    var languages = [
+        ["Hindi"],
+        ["English"],
+        ["French"],
+        ["Bengali"],
+        ["Sanskrit"],
+    ]
+    connection.query("INSERT INTO Languages(Name) VALUES ?", [languages], function(err, results){
+        if(err)
+        {
+            console.log("Error inserting languages to table.");
+            throw err;
+        }
+        else
+        {
+            console.log("Inserted languages to table.");
+            cb(null, null);
+        }
+    })
 });
+
+// Insert tags
+functions.push(function(callback) 
+{
+    var tags = [
+        ["Science"],
+        ["Science Fiction"],
+        ["Thriller"],
+        ["Suspense"],
+        ["Romance"],
+        ["Railway"],
+    ];
+
+    connection.query("INSERT INTO Tags(Name) VALUES ?", [tags], function(err, results){
+        if(err)
+        {
+            console.log("Error inserting tags to table.");
+            throw err;
+        }
+        else
+        {
+            console.log("Inserted tags to table.");
+            callback(null, null);
+        }
+    })
+});
+
+// End connection
+functions.push(function(callback)
+{
+    connection.end();
+    callback(null, null);
+});
+
+async.series(functions);
+

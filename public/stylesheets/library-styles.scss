@@ -1,0 +1,13 @@
+input:checked + label.selector-button {
+    // border: 3px solid green;
+    background-color: rgb(17, 131, 23);
+}
+
+input + label.selector-button {
+    width: 100%;
+    overflow: hidden;
+}
+
+#BookCoverImage {
+    max-height: 20rem
+}

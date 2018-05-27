@@ -7,27 +7,31 @@ var sassMiddleware = require('node-sass-middleware');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+var libraryRouter = require("./routes/library");
+var apiRouter = require("./routes/api");
 
 var app = express();
 
 // Set up mysql
-var mysql = require("mysql");
-var connection = mysql.createConnection({
-  host     : 'localhost',
-  user     : 'guestuser',
-  //password : '',
-  database : 'irimee'
-});
+var connection = require("./db");
+// // Set up mysql
+// var mysql = require("mysql");
+// var connection = mysql.createConnection({
+//   host     : 'localhost',
+//   user     : 'guestuser',
+//   //password : '',
+//   database : 'irimee'
+// });
 
-// Connect to mysql
-connection.connect(function(err) {
-  if (err) {
-    console.error('error connecting: ' + err.stack);
-    return;
-  }
+// // Connect to mysql
+// connection.connect(function(err) {
+//   if (err) {
+//     console.error('error connecting: ' + err.stack);
+//     return;
+//   }
 
-  console.log('connected as id ' + connection.threadId);
-});
+//   console.log('connected as id ' + connection.threadId);
+// });
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -40,13 +44,16 @@ app.use(cookieParser());
 app.use(sassMiddleware({
   src: path.join(__dirname, 'public'),
   dest: path.join(__dirname, 'public'),
-  indentedSyntax: true, // true = .sass and false = .scss
+  debug: true,
+  indentedSyntax: false, // true = .sass and false = .scss
   sourceMap: true
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use('/library', libraryRouter);
+app.use('/api', apiRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -64,7 +71,4 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-module.exports = {
-  app: app,
-  connection: connection
-};
+module.exports = app;

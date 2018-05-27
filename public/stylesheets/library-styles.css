@@ -1,0 +1,11 @@
+input:checked + label.selector-button {
+  background-color: #118317; }
+
+input + label.selector-button {
+  width: 100%;
+  overflow: hidden; }
+
+#BookCoverImage {
+  max-height: 20rem; }
+
+/*# sourceMappingURL=library-styles.css.map */
